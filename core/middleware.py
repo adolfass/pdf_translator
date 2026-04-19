@@ -89,7 +89,10 @@ def _reset_quota_if_needed(user: User, db: Session):
     if user.role == "admin":
         return
     now = datetime.now(timezone.utc)
-    if user.quota_reset_at and now >= user.quota_reset_at:
+    reset_at = user.quota_reset_at
+    if reset_at and reset_at.tzinfo is None:
+        reset_at = reset_at.replace(tzinfo=timezone.utc)
+    if reset_at and now >= reset_at:
         user.quota_used = 0
         user.quota_reset_at = _next_month(now)
         db.commit()

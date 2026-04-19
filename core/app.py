@@ -59,18 +59,21 @@ async function onTelegramAuth(user) {
     const statusEl = document.getElementById('status');
     const quotaEl = document.getElementById('quota');
     try {
-        const params = new URLSearchParams(user);
-        const resp = await fetch('/api/auth/telegram?' + params.toString(), { method: 'POST' });
+        const params = Object.entries(user)
+            .filter(([_, v]) => v !== undefined && v !== '')
+            .map(([k, v]) => k + '=' + encodeURIComponent(v))
+            .join('&');
+        const resp = await fetch('/api/auth/telegram?' + params, { method: 'POST' });
         const data = await resp.json();
         if (!resp.ok) throw new Error(data.detail || 'Auth failed');
         localStorage.setItem('token', data.access_token);
-        statusEl.textContent = '✅ Signed in as ' + (data.user.username || data.user.first_name);
+        statusEl.textContent = 'Signed in as ' + (data.user.username || data.user.first_name);
         statusEl.className = 'status ok';
         quotaEl.textContent = 'Quota: ' + data.user.quota_used.toLocaleString() + ' / ' + data.user.quota_limit.toLocaleString() + ' chars';
         quotaEl.style.display = 'block';
         showApp(data.user);
     } catch (e) {
-        statusEl.textContent = '❌ ' + e.message;
+        statusEl.textContent = 'Auth error: ' + e.message;
         statusEl.className = 'status err';
     }
 }
@@ -81,9 +84,9 @@ function showApp(user) {
     const token = localStorage.getItem('token');
     if (token) {
         fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
-            .then(r => r.json()).then(data => {
-                if (data.id) showApp(data);
-            }).catch(() => localStorage.removeItem('token'));
+            .then(r => { if (r.ok) return r.json(); throw new Error('expired'); })
+            .then(data => { if (data && data.id) showApp(data); })
+            .catch(() => localStorage.removeItem('token'));
     }
 })();
 </script>
@@ -121,9 +124,9 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"])
 def index():
-    return LOGIN_HTML
+    return HTMLResponse(content=LOGIN_HTML)
 
 
 from core.routes import router as api_router  # noqa: E402
