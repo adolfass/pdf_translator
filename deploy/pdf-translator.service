@@ -1,0 +1,20 @@
+[Unit]
+Description=PDF Translator — FastAPI Uvicorn Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/pdf-translator
+Environment=PATH=/var/www/pdf-translator/venv/bin
+ExecStart=/var/www/pdf-translator/venv/bin/uvicorn core.app:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/www/pdf-translator/logs/uvicorn.out.log
+StandardError=append:/var/www/pdf-translator/logs/uvicorn.err.log
+
+# Resource limits
+MemoryMax=6G
+
+[Install]
+WantedBy=multi-user.target
