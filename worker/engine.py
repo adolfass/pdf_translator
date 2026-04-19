@@ -96,7 +96,7 @@ def create_zip_archive(markdown_text: str, images: dict, output_dir: str) -> str
     return zip_path
 
 
-def process_task(task_id: str, pdf_path: str):
+def process_task(task_id: str, pdf_path: str, user_id: str = None):
     db = SessionLocal()
     try:
         task = db.query(Task).filter(Task.id == task_id).first()
@@ -127,7 +127,16 @@ def process_task(task_id: str, pdf_path: str):
         task.progress = 80.0
         db.commit()
 
-        # Step 3: Create ZIP
+        # Step 3: Update user quota
+        if user_id:
+            user = db.query(__import__("shared.models", fromlist=["User"]).User).filter(
+                __import__("shared.models", fromlist=["User"]).User.id == user_id
+            ).first()
+            if user and user.role != "admin":
+                user.quota_used += task.chars_translated
+                db.commit()
+
+        # Step 4: Create ZIP
         logger.info("Creating ZIP archive")
         result_dir = os.path.join(os.path.dirname(__file__), "..", "results", task_id)
         os.makedirs(result_dir, exist_ok=True)
