@@ -14,8 +14,18 @@ router = APIRouter()
 
 
 @router.get("/health")
-def healthcheck():
-    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
+def healthcheck(db: Session = Depends(get_db)):
+    try:
+        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        db_status = "connected"
+    except Exception:
+        db_status = "disconnected"
+
+    return {
+        "status": "ok",
+        "database": db_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
 
 
 @router.post("/upload")
@@ -48,7 +58,10 @@ async def upload_pdf(file: UploadFile, background_tasks: BackgroundTasks, db: Se
 
 @router.get("/status/{task_id}")
 def get_status(task_id: str, db: Session = Depends(get_db)):
-    task = db.query(Task).filter(Task.id == task_id).first()
+    try:
+        task = db.query(Task).filter(Task.id == task_id).first()
+    except Exception:
+        task = None
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
@@ -66,22 +79,22 @@ def get_status(task_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/download/{task_id}")
-def download_result(task_id: str):
+def download_result(task_id: str, db: Session = Depends(get_db)):
     result_dir = os.path.join("results", task_id)
     zip_path = os.path.join(result_dir, "result.zip")
 
     if not os.path.exists(zip_path):
-        task_db = SessionLocal()
         try:
-            task = task_db.query(Task).filter(Task.id == task_id).first()
-            if not task:
-                raise HTTPException(status_code=404, detail="Task not found")
-            if task.status == "failed":
-                raise HTTPException(status_code=500, detail=f"Task failed: {task.error_msg}")
-            if task.status != "completed":
-                raise HTTPException(status_code=400, detail=f"Task not ready: {task.status}")
-        finally:
-            task_db.close()
+            task = db.query(Task).filter(Task.id == task_id).first()
+        except Exception:
+            task = None
+
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task.status == "failed":
+            raise HTTPException(status_code=500, detail=f"Task failed: {task.error_msg}")
+        if task.status != "completed":
+            raise HTTPException(status_code=400, detail=f"Task not ready: {task.status}")
         raise HTTPException(status_code=404, detail="Result file not found")
 
     return FileResponse(
