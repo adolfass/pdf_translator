@@ -211,6 +211,15 @@ LOGIN_HTML = """
         .page-range-input::placeholder { color: var(--text-secondary); opacity: 0.5; }
         .page-range-wrap small { font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block; }
     </style>
+    <script>
+    window.onTelegramAuth = function(user) {
+        window._tgAuthUser = user;
+        window._tgAuthReady = true;
+        if (window._processAuth) {
+            window._processAuth(user);
+        }
+    };
+    </script>
 </head>
 <body>
 <div class="container">
@@ -223,7 +232,7 @@ LOGIN_HTML = """
                 data-telegram-login="pdf_translator_epub_bot"
                 data-size="large"
                 data-radius="8"
-                data-onauth="onTelegramAuth(user)"
+                data-onauth="onTelegramAuth"
                 data-request-access="write"></script>
         </div>
     </div>
@@ -263,7 +272,7 @@ LOGIN_HTML = """
 const API = '';
 let currentToken = localStorage.getItem('token');
 
-async function onTelegramAuth(user) {
+async function handleTelegramAuth(user) {
     const statusEl = document.getElementById('status');
     try {
         const params = Object.entries(user)
@@ -305,6 +314,10 @@ function doLogout() {
 }
 
 async function checkAuth() {
+    if (window._tgAuthUser && window._tgAuthReady) {
+        await handleTelegramAuth(window._tgAuthUser);
+        return;
+    }
     if (!currentToken) return;
     try {
         const r = await fetch(API + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + currentToken } });
@@ -380,7 +393,7 @@ function addTaskToUI(task) {
     const badgeClass = task.status || 'pending';
     const badge = '<span class="badge ' + badgeClass + '">' + task.status + '</span>';
     const pages = task.page_range ? '<span style="color:#94a3b8;font-size:11px;margin-right:8px">p.' + task.page_range + '</span>' : '';
-    const dl = task.download ? '<button class="download-btn" onclick="downloadFile(\'' + task.id + '\', this)">Download</button>' : '';
+    const dl = task.download ? '<button class="download-btn" data-task-id="' + task.id + '" onclick="downloadFile(this.dataset.taskId, this)">Download</button>' : '';
     const el = document.createElement('div');
     el.className = 'task-item';
     el.innerHTML = '<span class="filename">' + (task.filename || task.original_filename || 'task') + '</span>' + pages + badge + dl;
