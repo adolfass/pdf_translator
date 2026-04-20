@@ -210,6 +210,23 @@ LOGIN_HTML = """
         }
         .page-range-input::placeholder { color: var(--text-secondary); opacity: 0.5; }
         .page-range-wrap small { font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block; }
+
+        .file-preview { display: none; margin: 16px 0; padding: 14px; background: rgba(15,23,42,0.6); border: 1px solid rgba(168,85,247,0.2); border-radius: 8px; text-align: left; }
+        .file-preview.visible { display: block; }
+        .file-preview .name { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+        .file-preview .actions { display: flex; gap: 8px; margin-top: 12px; }
+        .btn-start {
+            flex: 1; padding: 10px; border: none; border-radius: 6px; cursor: pointer;
+            font-size: 14px; font-weight: 600; color: #fff;
+            background: var(--gradient-primary); transition: all 0.2s;
+        }
+        .btn-start:hover { box-shadow: 0 0 15px rgba(168,85,247,0.5); transform: scale(1.02); }
+        .btn-start:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+        .btn-cancel {
+            padding: 10px 18px; border: 1px solid rgba(239,68,68,0.4); border-radius: 6px;
+            cursor: pointer; font-size: 14px; color: #f87171; background: transparent; transition: all 0.2s;
+        }
+        .btn-cancel:hover { background: rgba(239,68,68,0.15); border-color: #f87171; }
     </style>
     <script>
     window.onTelegramAuth = function(user) {
@@ -249,11 +266,18 @@ LOGIN_HTML = """
                 <div class="icon">📄</div>
                 <p>Drop a PDF here or click to browse</p>
             </div>
-            <input type="file" id="file-input" accept=".pdf" onchange="handleFile(this.files[0])">
-            <div class="page-range-wrap">
-                <label for="page-range">Pages to process (optional):</label>
-                <input type="text" id="page-range" class="page-range-input" placeholder="e.g., 1-10, 15, 20-25">
-                <small>Leave empty to process all pages</small>
+            <input type="file" id="file-input" accept=".pdf" onchange="onFileSelected(this.files[0])" style="display:none">
+            <div class="file-preview" id="file-preview">
+                <div class="name" id="file-name"></div>
+                <div class="page-range-wrap">
+                    <label for="page-range">Pages to process (optional):</label>
+                    <input type="text" id="page-range" class="page-range-input" placeholder="e.g., 1-10, 15, 20-25">
+                    <small>Leave empty to process all pages</small>
+                </div>
+                <div class="actions">
+                    <button class="btn-start" id="btn-start" onclick="startProcessing()">▶️ Start</button>
+                    <button class="btn-cancel" onclick="cancelFile()">✕ Cancel</button>
+                </div>
             </div>
         </div>
 
@@ -327,17 +351,38 @@ async function checkAuth() {
     currentToken = null;
 }
 
+let selectedFile = null;
+
 const dropZone = document.getElementById('drop-zone');
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) onFileSelected(e.dataTransfer.files[0]); });
 
-async function handleFile(file) {
+function onFileSelected(file) {
     if (!file || !file.name.toLowerCase().endsWith('.pdf')) { alert('Only PDF files accepted'); return; }
+    selectedFile = file;
+    document.getElementById('file-name').textContent = '📎 ' + file.name;
+    document.getElementById('file-preview').classList.add('visible');
+    document.getElementById('drop-zone').style.display = 'none';
+}
+
+function cancelFile() {
+    selectedFile = null;
+    document.getElementById('file-input').value = '';
+    document.getElementById('file-preview').classList.remove('visible');
+    document.getElementById('drop-zone').style.display = 'block';
+}
+
+async function startProcessing() {
+    if (!selectedFile) return;
+    const file = selectedFile;
     const progressWrap = document.getElementById('progress-wrap');
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
     const pageRange = document.getElementById('page-range').value.trim();
+    const btnStart = document.getElementById('btn-start');
+    btnStart.disabled = true;
+    btnStart.textContent = '⏳ Uploading...';
     progressWrap.classList.add('visible');
     progressFill.style.width = '10%';
     progressText.textContent = 'Uploading ' + file.name + (pageRange ? ' (pages: ' + pageRange + ')' : '') + '...';
@@ -352,11 +397,15 @@ async function handleFile(file) {
         progressFill.style.width = '30%';
         progressText.textContent = 'Processing' + (pageRange ? ' pages ' + pageRange : '...');
         pollTask(data.task_id, file.name, pageRange);
+        cancelFile();
     } catch (e) {
         progressText.textContent = 'Upload error: ' + e.message;
         progressFill.style.width = '0%';
         progressFill.style.background = '#e55';
+        btnStart.disabled = false;
+        btnStart.textContent = '▶️ Start';
     }
+}
 }
 
 async function pollTask(taskId, filename, pageRange) {
