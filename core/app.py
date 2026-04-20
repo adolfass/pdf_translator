@@ -317,7 +317,7 @@ function doLogout() {
 }
 
 async function checkAuth() {
-    // Check if returning from Yandex OAuth with token in URL
+    // Parse token from URL query params (Yandex OAuth callback)
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get('token');
     const urlUsername = params.get('username');

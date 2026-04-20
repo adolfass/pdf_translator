@@ -2,6 +2,7 @@ import logging
 import os
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -88,7 +89,7 @@ def yandex_callback(code: str = None, error: str = None, error_description: str 
     token = create_access_token(user.id, user.role)
 
     return RedirectResponse(
-        url=f"/?token={token}&user_id={user.id}&username={user.username}",
+        url=f"/?token={quote(token, safe='')}&user_id={quote(user.id, safe='')}&username={quote(user.username or '', safe='')}",
         status_code=302,
     )
 
