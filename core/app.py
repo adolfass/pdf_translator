@@ -380,11 +380,38 @@ function addTaskToUI(task) {
     const badgeClass = task.status || 'pending';
     const badge = '<span class="badge ' + badgeClass + '">' + task.status + '</span>';
     const pages = task.page_range ? '<span style="color:#94a3b8;font-size:11px;margin-right:8px">p.' + task.page_range + '</span>' : '';
-    const dl = task.download ? '<a class="download-btn" href="/api/download/' + task.id + '" download>Download</a>' : '';
+    const dl = task.download ? '<button class="download-btn" onclick="downloadFile(\'' + task.id + '\', this)">Download</button>' : '';
     const el = document.createElement('div');
     el.className = 'task-item';
     el.innerHTML = '<span class="filename">' + (task.filename || task.original_filename || 'task') + '</span>' + pages + badge + dl;
     list.prepend(el);
+}
+
+async function downloadFile(taskId, btn) {
+    const orig = btn.textContent;
+    btn.textContent = '...';
+    btn.disabled = true;
+    try {
+        const response = await fetch(API + '/api/download/' + taskId, {
+            headers: { 'Authorization': 'Bearer ' + currentToken }
+        });
+        if (!response.ok) throw new Error('Download failed (' + response.status + ')');
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'book_' + taskId.slice(0, 8) + '.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        btn.textContent = 'Done!';
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 2000);
+    } catch (e) {
+        btn.textContent = 'Error';
+        btn.disabled = false;
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+    }
 }
 
 async function loadTasks() {
