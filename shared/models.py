@@ -11,7 +11,8 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    telegram_id = Column(Integer, unique=True, nullable=False)
+    telegram_id = Column(Integer, unique=True, nullable=True)
+    yandex_id = Column(String(64), unique=True, nullable=True)
     username = Column(String(100), nullable=True)
     first_name = Column(String(100), nullable=True)
     role = Column(String(20), nullable=False, default="user")

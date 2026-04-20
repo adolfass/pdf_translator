@@ -227,16 +227,19 @@ LOGIN_HTML = """
             cursor: pointer; font-size: 14px; color: #f87171; background: transparent; transition: all 0.2s;
         }
         .btn-cancel:hover { background: rgba(239,68,68,0.15); border-color: #f87171; }
-    </style>
-    <script>
-    window.onTelegramAuth = function(user) {
-        window._tgAuthUser = user;
-        window._tgAuthReady = true;
-        if (window._processAuth) {
-            window._processAuth(user);
+
+        .yandex-btn {
+            display: inline-block; padding: 14px 32px; border-radius: 8px;
+            background: linear-gradient(135deg, #fc3f1d, #ffcc00);
+            color: #000; font-weight: 700; font-size: 16px;
+            text-decoration: none; transition: all 0.2s;
+            box-shadow: 0 0 15px rgba(252, 63, 29, 0.3);
         }
-    };
-    </script>
+        .yandex-btn:hover {
+            box-shadow: 0 0 25px rgba(252, 63, 29, 0.6);
+            transform: scale(1.03);
+        }
+    </style>
 </head>
 <body>
 <div class="container">
@@ -245,12 +248,7 @@ LOGIN_HTML = """
 
     <div id="login-view">
         <div class="widget-wrap">
-            <script async src="https://telegram.org/js/telegram-widget.js?22"
-                data-telegram-login="pdf_translator_epub_bot"
-                data-size="large"
-                data-radius="8"
-                data-onauth="onTelegramAuth"
-                data-request-access="write"></script>
+            <a href="/api/auth/yandex/login" class="yandex-btn">Войти через Яндекс</a>
         </div>
     </div>
 
@@ -296,25 +294,6 @@ LOGIN_HTML = """
 const API = '';
 let currentToken = localStorage.getItem('token');
 
-async function handleTelegramAuth(user) {
-    const statusEl = document.getElementById('status');
-    try {
-        const params = Object.entries(user)
-            .filter(([_, v]) => v !== undefined && v !== '')
-            .map(([k, v]) => k + '=' + encodeURIComponent(v))
-            .join('&');
-        const resp = await fetch(API + '/api/auth/telegram?' + params, { method: 'POST' });
-        const data = await resp.json();
-        if (!resp.ok) throw new Error(data.detail || 'Auth failed');
-        currentToken = data.access_token;
-        localStorage.setItem('token', currentToken);
-        showApp(data.user);
-    } catch (e) {
-        statusEl.textContent = 'Auth error: ' + e.message;
-        statusEl.className = 'status err';
-    }
-}
-
 function showApp(user) {
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('app-view').style.display = 'block';
@@ -338,8 +317,15 @@ function doLogout() {
 }
 
 async function checkAuth() {
-    if (window._tgAuthUser && window._tgAuthReady) {
-        await handleTelegramAuth(window._tgAuthUser);
+    // Check if returning from Yandex OAuth with token in URL
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    const urlUsername = params.get('username');
+    if (urlToken) {
+        currentToken = urlToken;
+        localStorage.setItem('token', currentToken);
+        window.history.replaceState({}, '', window.location.pathname);
+        showApp({ username: urlUsername || 'User' });
         return;
     }
     if (!currentToken) return;

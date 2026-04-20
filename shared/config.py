@@ -5,6 +5,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     yandex_api_key: str = ""
     yandex_folder_id: str = ""
+    yandex_client_id: str = ""
+    yandex_client_secret: str = ""
+    yandex_redirect_uri: str = "https://book.itplane.ru/api/auth/yandex/callback"
     telegram_bot_token: str = ""
     telegram_bot_domain: str = "book.itplane.ru"
     database_url: str = "sqlite:///./data/app.db"
