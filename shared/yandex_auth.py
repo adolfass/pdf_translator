@@ -12,7 +12,7 @@ def get_yandex_login_url(state: str = None) -> str:
         "response_type": "code",
         "client_id": settings.yandex_client_id,
         "redirect_uri": settings.yandex_redirect_uri,
-        "scope": "login:email login:info login:avatar",
+        "scope": "login:info",
     }
     if state:
         params["state"] = state

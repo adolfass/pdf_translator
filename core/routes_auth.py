@@ -28,7 +28,22 @@ def yandex_login():
 
 
 @router.get("/yandex/callback")
-def yandex_callback(code: str, db: Session = Depends(get_db)):
+def yandex_callback(code: str = None, error: str = None, error_description: str = None, db: Session = Depends(get_db)):
+    if error:
+        logger.error("Yandex OAuth error: %s — %s", error, error_description)
+        msg = error_description or error
+        if error == "invalid_scope":
+            msg = "Yandex OAuth: requested scope not granted. Open oauth.yandex.ru → your app → Scopes → enable 'login:info' and save."
+        return HTMLResponse(
+            status_code=400,
+            content=f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Auth Error</title>
+            <style>body{{font-family:sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh}}
+            .box{{background:#1e293b;padding:40px;border-radius:16px;max-width:500px;text-align:center}}
+            h1{{color:#f87171}}a{{color:#a855f7}}</style></head><body><div class="box">
+            <h1>⚠️ Auth Error</h1><p>{msg}</p>
+            <p><a href="/">← Back to login</a></p></div></body></html>""",
+        )
+
     try:
         token_data = exchange_code_for_token(code)
         yandex_access = token_data.get("access_token")
@@ -38,7 +53,18 @@ def yandex_callback(code: str, db: Session = Depends(get_db)):
         yandex_user = fetch_yandex_user(yandex_access)
     except Exception as e:
         logger.exception("Yandex OAuth failed")
-        raise HTTPException(status_code=400, detail=f"Yandex auth failed: {e}")
+        err_msg = str(e)
+        if "invalid_scope" in err_msg.lower():
+            err_msg = "Yandex OAuth: requested scope not granted. Open oauth.yandex.ru → your app → Scopes → enable 'login:info' and save."
+        return HTMLResponse(
+            status_code=400,
+            content=f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Auth Error</title>
+            <style>body{{font-family:sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;min-height:100vh}}
+            .box{{background:#1e293b;padding:40px;border-radius:16px;max-width:500px;text-align:center}}
+            h1{{color:#f87171}}a{{color:#a855f7}}</style></head><body><div class="box">
+            <h1>⚠️ Auth Error</h1><p>{err_msg}</p>
+            <p><a href="/">← Back to login</a></p></div></body></html>""",
+        )
 
     user = db.query(User).filter(User.yandex_id == yandex_user["yandex_id"]).first()
     if not user:
