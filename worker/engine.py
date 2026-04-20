@@ -6,6 +6,8 @@ import time
 import zipfile
 from pathlib import Path
 
+import re
+
 import requests
 
 from shared.config import settings
@@ -16,6 +18,55 @@ from worker.retry import yandex_retry_policy, circuit_guard
 logger = logging.getLogger(__name__)
 
 YANDEX_URL = "https://translate.api.cloud.yandex.net/translate/v2/translate"
+
+PAGE_RANGE_RE = re.compile(r"^(\d+(-\d+)?,?)+$")
+
+
+def parse_page_range(page_range: str) -> list[int]:
+    pages = set()
+    for part in page_range.split(","):
+        part = part.strip()
+        if "-" in part:
+            start, end = part.split("-", 1)
+            pages.update(range(int(start), int(end) + 1))
+        else:
+            pages.add(int(part))
+    return sorted(pages)
+
+
+def extract_text_from_pdf(pdf_path: str, page_range: str = None):
+    try:
+        from marker.converters.pdf import PdfConverter
+        from marker.models import create_model_dict
+        from marker.output import text_from_rendered
+
+        config = {}
+        if page_range:
+            pages = parse_page_range(page_range)
+            if pages:
+                config["page_range"] = (pages[0], pages[-1])
+                logger.info("Extracting pages %d-%d", pages[0], pages[-1])
+
+        converter = PdfConverter(artifact_dict=create_model_dict(), config=config)
+        rendered = converter(pdf_path)
+        text, _, images = text_from_rendered(rendered)
+        return text, images
+    except Exception:
+        logger.warning("Marker failed, falling back to force_ocr")
+        from marker.converters.pdf import PdfConverter
+        from marker.models import create_model_dict
+        from marker.output import text_from_rendered
+
+        config = {"force_ocr": True}
+        if page_range:
+            pages = parse_page_range(page_range)
+            if pages:
+                config["page_range"] = (pages[0], pages[-1])
+
+        converter = PdfConverter(artifact_dict=create_model_dict(), config=config)
+        rendered = converter(pdf_path)
+        text, _, images = text_from_rendered(rendered)
+        return text, images
 
 
 def _translate_chunk(text: str, target_lang: str = "ru") -> str:
@@ -58,28 +109,6 @@ def translate_document(text: str, chunk_size: int = None) -> str:
     return "".join(parts)
 
 
-def extract_text_from_pdf(pdf_path: str) -> str:
-    try:
-        from marker.converters.pdf import PdfConverter
-        from marker.models import create_model_dict
-        from marker.output import text_from_rendered
-
-        converter = PdfConverter(artifact_dict=create_model_dict())
-        rendered = converter(pdf_path)
-        text, _, images = text_from_rendered(rendered)
-        return text, images
-    except Exception:
-        logger.warning("Marker failed, falling back to force_ocr")
-        from marker.converters.pdf import PdfConverter
-        from marker.models import create_model_dict
-        from marker.output import text_from_rendered
-
-        converter = PdfConverter(artifact_dict=create_model_dict(), config={"force_ocr": True})
-        rendered = converter(pdf_path)
-        text, _, images = text_from_rendered(rendered)
-        return text, images
-
-
 def create_zip_archive(markdown_text: str, images: dict, output_dir: str) -> str:
     zip_path = os.path.join(output_dir, "result.zip")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -96,7 +125,7 @@ def create_zip_archive(markdown_text: str, images: dict, output_dir: str) -> str
     return zip_path
 
 
-def process_task(task_id: str, pdf_path: str, user_id: str = None):
+def process_task(task_id: str, pdf_path: str, user_id: str = None, page_range: str = None):
     db = SessionLocal()
     try:
         task = db.query(Task).filter(Task.id == task_id).first()
@@ -106,14 +135,19 @@ def process_task(task_id: str, pdf_path: str, user_id: str = None):
 
         task.status = "processing"
         task.progress = 0.0
+        if page_range:
+            task.page_range = page_range
         db.commit()
 
         # Step 1: Extract text from PDF
-        logger.info("Extracting text from %s", pdf_path)
+        if page_range:
+            logger.info("Extracting text from %s (pages: %s)", pdf_path, page_range)
+        else:
+            logger.info("Extracting text from %s", pdf_path)
         task.progress = 10.0
         db.commit()
 
-        text, images = extract_text_from_pdf(pdf_path)
+        text, images = extract_text_from_pdf(pdf_path, page_range)
         task.progress = 30.0
         db.commit()
 

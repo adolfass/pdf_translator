@@ -3,7 +3,9 @@ import os
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile
+import re
+
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -15,6 +17,8 @@ from worker.engine import process_task
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["api"])
+
+PAGE_RANGE_RE = re.compile(r"^(\d+(-\d+)?,?)+$")
 
 
 @router.get("/health")
@@ -40,9 +44,13 @@ async def upload_pdf(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
+    page_range: str = Form(None),
 ):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are accepted")
+
+    if page_range and not PAGE_RANGE_RE.match(page_range):
+        raise HTTPException(status_code=400, detail="Invalid page range format. Use: 1-10,15,20-25")
 
     check_quota(user)
 
@@ -60,14 +68,15 @@ async def upload_pdf(
         user_id=user.id,
         status="pending",
         original_filename=file.filename,
+        page_range=page_range,
     )
     db.add(task)
     db.commit()
     db.refresh(task)
 
-    background_tasks.add_task(process_task, task_id, pdf_path, user.id)
+    background_tasks.add_task(process_task, task_id, pdf_path, user.id, page_range)
 
-    return {"task_id": task_id, "status": "pending", "filename": file.filename}
+    return {"task_id": task_id, "status": "pending", "filename": file.filename, "page_range": page_range}
 
 
 @router.get("/status/{task_id}")
@@ -90,6 +99,7 @@ def get_status(task_id: str, db: Session = Depends(get_db), user: User = Depends
         "chars_translated": task.chars_translated,
         "original_filename": task.original_filename,
         "result_filename": task.result_filename,
+        "page_range": task.page_range,
         "created_at": task.created_at.isoformat() if task.created_at else None,
         "completed_at": task.completed_at.isoformat() if task.completed_at else None,
     }

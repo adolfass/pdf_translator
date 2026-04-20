@@ -27,43 +27,189 @@ LOGIN_HTML = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF Translator</title>
     <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-hover: #263348;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --neon-purple: #a855f7;
+            --neon-pink: #ec4899;
+            --neon-blue: #3b82f6;
+            --neon-cyan: #06b6d4;
+            --gradient-primary: linear-gradient(135deg, #a855f7, #ec4899, #3b82f6, #06b6d4);
+            --gradient-bg: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            --glow-purple: 0 0 20px rgba(168, 85, 247, 0.4);
+            --glow-cyan: 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-        .container { background: #fff; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); padding: 40px; max-width: 520px; width: 100%; text-align: center; }
-        h1 { font-size: 24px; margin-bottom: 8px; color: #1a1a2e; }
-        .subtitle { color: #666; margin-bottom: 24px; line-height: 1.5; font-size: 14px; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gradient-bg);
+            background-size: 400% 400%;
+            animation: gradient-shift 15s ease infinite;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+        }
+
+        @keyframes gradient-shift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes neon-pulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.3), 0 0 10px rgba(168, 85, 247, 0.2); }
+            50% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.6), 0 0 30px rgba(168, 85, 247, 0.3), 0 0 45px rgba(168, 85, 247, 0.1); }
+        }
+
+        @keyframes border-glow {
+            0%, 100% { border-color: var(--neon-purple); box-shadow: var(--glow-purple); }
+            33% { border-color: var(--neon-pink); box-shadow: 0 0 20px rgba(236, 72, 153, 0.4); }
+            66% { border-color: var(--neon-cyan); box-shadow: var(--glow-cyan); }
+        }
+
+        .container {
+            background: var(--bg-card);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), var(--glow-purple);
+            padding: 40px;
+            max-width: 520px;
+            width: 100%;
+            text-align: center;
+            animation: neon-pulse 4s ease-in-out infinite;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .subtitle { color: var(--text-secondary); margin-bottom: 24px; line-height: 1.5; font-size: 14px; }
+
         .widget-wrap { display: flex; justify-content: center; margin: 20px 0; }
+
         .status { margin-top: 16px; padding: 12px; border-radius: 8px; font-size: 14px; display: none; }
-        .status.ok { background: #e8f5e9; color: #2e7d32; display: block; }
-        .status.err { background: #ffebee; color: #c62828; display: block; }
-        .status.info { background: #e3f2fd; color: #1565c0; display: block; }
-        .quota { font-size: 13px; color: #888; margin-top: 8px; }
-        .user-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 8px; }
-        .user-bar .name { font-weight: 600; color: #1a1a2e; }
-        .user-bar .logout { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px; color: #666; }
-        .user-bar .logout:hover { background: #fee; border-color: #e55; color: #c00; }
+        .status.ok { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); display: block; }
+        .status.err { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); display: block; }
+        .status.info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); display: block; }
+
+        .quota { font-size: 13px; color: var(--text-secondary); margin-top: 8px; }
+
+        .user-bar {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding: 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(168, 85, 247, 0.2);
+            border-radius: 8px;
+        }
+        .user-bar .name { font-weight: 600; color: var(--text-primary); }
+        .user-bar .logout {
+            background: transparent; border: 1px solid rgba(239, 68, 68, 0.4);
+            border-radius: 6px; padding: 6px 14px; cursor: pointer;
+            font-size: 13px; color: #f87171; transition: all 0.2s;
+        }
+        .user-bar .logout:hover {
+            background: rgba(239, 68, 68, 0.15); border-color: #f87171;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+        }
+
         #upload-area { display: none; }
         #upload-area.visible { display: block; }
-        .drop-zone { border: 2px dashed #ccc; border-radius: 12px; padding: 40px 20px; cursor: pointer; transition: all 0.2s; background: #fafafa; }
-        .drop-zone:hover, .drop-zone.dragover { border-color: #4a90d9; background: #f0f7ff; }
-        .drop-zone p { color: #888; font-size: 14px; }
+
+        .drop-zone {
+            border: 2px dashed var(--neon-purple);
+            border-radius: 12px; padding: 40px 20px; cursor: pointer;
+            transition: all 0.3s;
+            background: rgba(168, 85, 247, 0.05);
+            animation: border-glow 6s ease-in-out infinite;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--neon-cyan);
+            background: rgba(6, 182, 212, 0.1);
+            box-shadow: var(--glow-cyan);
+        }
+        .drop-zone p { color: var(--text-secondary); font-size: 14px; }
         .drop-zone .icon { font-size: 36px; margin-bottom: 8px; }
+
         #file-input { display: none; }
+
         .progress-wrap { margin-top: 16px; display: none; }
         .progress-wrap.visible { display: block; }
-        .progress-bar { height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 8px; }
-        .progress-bar .fill { height: 100%; background: #4a90d9; width: 0%; transition: width 0.3s; border-radius: 4px; }
-        .progress-text { font-size: 13px; color: #666; margin-top: 4px; }
+        .progress-bar {
+            height: 8px; background: rgba(15, 23, 42, 0.8);
+            border-radius: 4px; overflow: hidden; margin-top: 8px;
+            border: 1px solid rgba(168, 85, 247, 0.2);
+        }
+        .progress-bar .fill {
+            height: 100%;
+            background: var(--gradient-primary);
+            background-size: 200% 200%;
+            animation: gradient-shift 3s ease infinite;
+            width: 0%; transition: width 0.3s; border-radius: 4px;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+        }
+        .progress-text { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+
         .task-list { margin-top: 20px; text-align: left; }
-        .task-item { padding: 10px 14px; background: #f8f9fa; border-radius: 8px; margin-bottom: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
-        .task-item .filename { font-weight: 500; color: #1a1a2e; }
+        .task-item {
+            padding: 10px 14px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(168, 85, 247, 0.15);
+            border-radius: 8px; margin-bottom: 8px;
+            font-size: 13px; display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.2s;
+        }
+        .task-item:hover {
+            background: var(--bg-card-hover);
+            border-color: rgba(168, 85, 247, 0.3);
+        }
+        .task-item .filename { font-weight: 500; color: var(--text-primary); }
+
         .task-item .badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-        .badge.pending { background: #fff3e0; color: #e65100; }
-        .badge.processing { background: #e3f2fd; color: #1565c0; }
-        .badge.completed { background: #e8f5e9; color: #2e7d32; }
-        .badge.failed { background: #ffebee; color: #c62828; }
-        .task-item .download-btn { background: #4a90d9; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 12px; text-decoration: none; }
-        .task-item .download-btn:hover { background: #357abd; }
+        .badge.pending { background: rgba(251, 146, 60, 0.15); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
+        .badge.processing { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge.completed { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge.failed { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .task-item .download-btn {
+            background: var(--gradient-primary);
+            color: #fff; border: none; border-radius: 4px;
+            padding: 4px 10px; cursor: pointer; font-size: 12px;
+            text-decoration: none; transition: all 0.2s;
+        }
+        .task-item .download-btn:hover {
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+            transform: scale(1.05);
+        }
+
+        .page-range-wrap { margin: 16px 0 8px; text-align: left; }
+        .page-range-wrap label { font-size: 13px; color: var(--text-secondary); display: block; margin-bottom: 6px; }
+        .page-range-input {
+            width: 100%; padding: 10px 14px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            border-radius: 8px; color: var(--text-primary);
+            font-size: 14px; outline: none; transition: all 0.2s;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+        .page-range-input:focus {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.3);
+        }
+        .page-range-input::placeholder { color: var(--text-secondary); opacity: 0.5; }
+        .page-range-wrap small { font-size: 11px; color: var(--text-secondary); margin-top: 4px; display: block; }
     </style>
 </head>
 <body>
@@ -95,6 +241,11 @@ LOGIN_HTML = """
                 <p>Drop a PDF here or click to browse</p>
             </div>
             <input type="file" id="file-input" accept=".pdf" onchange="handleFile(this.files[0])">
+            <div class="page-range-wrap">
+                <label for="page-range">Pages to process (optional):</label>
+                <input type="text" id="page-range" class="page-range-input" placeholder="e.g., 1-10, 15, 20-25">
+                <small>Leave empty to process all pages</small>
+            </div>
         </div>
 
         <div class="progress-wrap" id="progress-wrap">
@@ -173,19 +324,21 @@ async function handleFile(file) {
     const progressWrap = document.getElementById('progress-wrap');
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
+    const pageRange = document.getElementById('page-range').value.trim();
     progressWrap.classList.add('visible');
     progressFill.style.width = '10%';
-    progressText.textContent = 'Uploading ' + file.name + '...';
+    progressText.textContent = 'Uploading ' + file.name + (pageRange ? ' (pages: ' + pageRange + ')' : '') + '...';
 
     const fd = new FormData();
     fd.append('file', file);
+    if (pageRange) fd.append('page_range', pageRange);
     try {
         const r = await fetch(API + '/api/upload', { method: 'POST', headers: { 'Authorization': 'Bearer ' + currentToken }, body: fd });
         const data = await r.json();
         if (!r.ok) throw new Error(data.detail || 'Upload failed');
         progressFill.style.width = '30%';
-        progressText.textContent = 'Processing...';
-        pollTask(data.task_id, file.name);
+        progressText.textContent = 'Processing' + (pageRange ? ' pages ' + pageRange : '...');
+        pollTask(data.task_id, file.name, pageRange);
     } catch (e) {
         progressText.textContent = 'Upload error: ' + e.message;
         progressFill.style.width = '0%';
@@ -193,7 +346,7 @@ async function handleFile(file) {
     }
 }
 
-async function pollTask(taskId, filename) {
+async function pollTask(taskId, filename, pageRange) {
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
     for (let i = 0; i < 300; i++) {
@@ -202,11 +355,12 @@ async function pollTask(taskId, filename) {
             const r = await fetch(API + '/api/status/' + taskId, { headers: { 'Authorization': 'Bearer ' + currentToken } });
             const data = await r.json();
             progressFill.style.width = Math.max(30, data.progress) + '%';
-            progressText.textContent = data.status + ' (' + Math.round(data.progress) + '%)';
+            const pages = data.page_range ? ' pages ' + data.page_range : '';
+            progressText.textContent = data.status + pages + ' (' + Math.round(data.progress) + '%)';
             if (data.status === 'completed') {
                 progressText.textContent = 'Done!';
                 progressFill.style.background = '#4caf50';
-                addTaskToUI({ id: taskId, filename, status: 'completed', download: true });
+                addTaskToUI({ id: taskId, filename, status: 'completed', download: true, page_range: data.page_range });
                 setTimeout(() => { document.getElementById('progress-wrap').classList.remove('visible'); progressFill.style.background = '#4a90d9'; }, 3000);
                 loadTasks();
                 return;
@@ -225,10 +379,11 @@ function addTaskToUI(task) {
     const list = document.getElementById('task-list');
     const badgeClass = task.status || 'pending';
     const badge = '<span class="badge ' + badgeClass + '">' + task.status + '</span>';
+    const pages = task.page_range ? '<span style="color:#94a3b8;font-size:11px;margin-right:8px">p.' + task.page_range + '</span>' : '';
     const dl = task.download ? '<a class="download-btn" href="/api/download/' + task.id + '" download>Download</a>' : '';
     const el = document.createElement('div');
     el.className = 'task-item';
-    el.innerHTML = '<span class="filename">' + (task.filename || task.original_filename || 'task') + '</span>' + badge + dl;
+    el.innerHTML = '<span class="filename">' + (task.filename || task.original_filename || 'task') + '</span>' + pages + badge + dl;
     list.prepend(el);
 }
 

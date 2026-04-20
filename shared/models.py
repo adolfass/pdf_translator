@@ -35,6 +35,7 @@ class Task(Base):
     chars_translated = Column(Integer, nullable=False, default=0)
     original_filename = Column(String(255), nullable=True)
     result_filename = Column(String(255), nullable=True)
+    page_range = Column(String(255), nullable=True)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     completed_at = Column(DateTime, nullable=True)
